@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}直播 - 视频分享平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1 class="text-white mb-2">
+            <i class="fas fa-video me-3"></i>视频直播
+        </h1>
+        <p class="text-white-50 mb-0">实时直播，分享精彩瞬间</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row g-4">
+        <!-- 摄像头直播 -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-webcam me-2"></i>摄像头直播
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="bg-black rounded-lg overflow-hidden mb-4" style="height: 360px;">
+                        <img src="{{ url_for('video_feed') }}" class="w-100 h-100 object-contain" id="camera-feed">
+                    </div>
+                    <div class="text-center">
+                        <button id="camera-toggle" class="btn btn-lg btn-danger mb-2">
+                            <i class="fas fa-power-off me-2"></i>开启直播
+                        </button>
+                        <span id="camera-status" class="badge bg-secondary">
+                            <i class="fas fa-circle fa-xs me-1"></i>直播关闭
+                        </span>
+                        <p class="text-muted mt-2">实时摄像头画面</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 本地视频直播 -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-gradient-to-r from-green-500 to-teal-600 text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-film me-2"></i>本地视频直播
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="bg-black rounded-lg overflow-hidden mb-4" style="height: 360px;">
+                        <img src="{{ url_for('video_file_feed', filename='test_video.mp4') }}" class="w-100 h-100 object-contain" id="video-feed">
+                    </div>
+                    <div class="text-center">
+                        <button id="video-toggle" class="btn btn-lg btn-danger mb-2">
+                            <i class="fas fa-power-off me-2"></i>开启直播
+                        </button>
+                        <span id="video-status" class="badge bg-secondary">
+                            <i class="fas fa-circle fa-xs me-1"></i>直播关闭
+                        </span>
+                        <p class="text-muted mt-2">本地视频循环播放</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 直播信息 -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>直播说明
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="bg-light p-4 rounded-lg">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="fas fa-webcam text-blue-500 me-2"></i>摄像头直播
+                                </h6>
+                                <ul class="text-muted">
+                                    <li>实时捕捉本地摄像头画面</li>
+                                    <li>支持局域网内多设备访问</li>
+                                    <li>自动添加时间戳</li>
+                                    <li>分辨率：640×480</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-light p-4 rounded-lg">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="fas fa-film text-green-500 me-2"></i>本地视频直播
+                                </h6>
+                                <ul class="text-muted">
+                                    <li>播放上传的本地视频文件</li>
+                                    <li>视频播放完毕自动循环</li>
+                                    <li>支持多用户同时观看</li>
+                                    <li>分辨率：854×480</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 获取直播状态
+    async function getLiveStatus() {
+        try {
+            const response = await fetch('/api/live/status');
+            const data = await response.json();
+            updateUI(data);
+        } catch (error) {
+            console.error('获取直播状态失败:', error);
+        }
+    }
+
+    // 更新UI显示
+    function updateUI(status) {
+        const cameraToggle = document.getElementById('camera-toggle');
+        const cameraStatus = document.getElementById('camera-status');
+        const videoToggle = document.getElementById('video-toggle');
+        const videoStatus = document.getElementById('video-status');
+
+        // 更新摄像头直播状态
+        if (status.camera) {
+            cameraToggle.className = 'btn btn-lg btn-success mb-2';
+            cameraToggle.innerHTML = '<i class="fas fa-power-off me-2"></i>关闭直播';
+            cameraStatus.className = 'badge bg-success';
+            cameraStatus.innerHTML = '<i class="fas fa-circle fa-xs me-1"></i>直播中';
+        } else {
+            cameraToggle.className = 'btn btn-lg btn-danger mb-2';
+            cameraToggle.innerHTML = '<i class="fas fa-power-off me-2"></i>开启直播';
+            cameraStatus.className = 'badge bg-secondary';
+            cameraStatus.innerHTML = '<i class="fas fa-circle fa-xs me-1"></i>直播关闭';
+        }
+
+        // 更新本地视频直播状态
+        if (status.video_file) {
+            videoToggle.className = 'btn btn-lg btn-success mb-2';
+            videoToggle.innerHTML = '<i class="fas fa-power-off me-2"></i>关闭直播';
+            videoStatus.className = 'badge bg-success';
+            videoStatus.innerHTML = '<i class="fas fa-circle fa-xs me-1"></i>直播中';
+        } else {
+            videoToggle.className = 'btn btn-lg btn-danger mb-2';
+            videoToggle.innerHTML = '<i class="fas fa-power-off me-2"></i>开启直播';
+            videoStatus.className = 'badge bg-secondary';
+            videoStatus.innerHTML = '<i class="fas fa-circle fa-xs me-1"></i>直播关闭';
+        }
+    }
+
+    // 切换摄像头直播状态
+    async function toggleCameraLive() {
+        try {
+            const response = await fetch('/api/live/status');
+            const currentStatus = await response.json();
+            const newStatus = !currentStatus.camera;
+            
+            const toggleResponse = await fetch('/api/live/camera', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            const result = await toggleResponse.json();
+            if (result.success) {
+                getLiveStatus();
+            }
+        } catch (error) {
+            console.error('控制摄像头直播失败:', error);
+        }
+    }
+
+    // 切换本地视频直播状态
+    async function toggleVideoLive() {
+        try {
+            const response = await fetch('/api/live/status');
+            const currentStatus = await response.json();
+            const newStatus = !currentStatus.video_file;
+            
+            const toggleResponse = await fetch('/api/live/video_file', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            const result = await toggleResponse.json();
+            if (result.success) {
+                getLiveStatus();
+            }
+        } catch (error) {
+            console.error('控制本地视频直播失败:', error);
+        }
+    }
+
+    // 页面加载时获取初始状态
+    document.addEventListener('DOMContentLoaded', function() {
+        getLiveStatus();
+        
+        // 添加按钮事件监听
+        document.getElementById('camera-toggle').addEventListener('click', toggleCameraLive);
+        document.getElementById('video-toggle').addEventListener('click', toggleVideoLive);
+    });
+
+    // 定期刷新视频流，防止连接中断
+    setInterval(function() {
+        const cameraFeed = document.getElementById('camera-feed');
+        const videoFeed = document.getElementById('video-feed');
+        
+        if (cameraFeed) {
+            cameraFeed.src = '{{ url_for('video_feed') }}?' + new Date().getTime();
+        }
+        
+        if (videoFeed) {
+            videoFeed.src = '{{ url_for('video_file_feed', filename='test_video.mp4') }}?' + new Date().getTime();
+        }
+    }, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}上传视频 - 视频分享平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">首页</a></li>
+            <li class="breadcrumb-item active">上传视频</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white py-4">
+                    <h4 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i>上传视频</h4>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm">
+                        <div class="mb-4">
+                            <label class="form-label">视频标题</label>
+                            <input type="text" class="form-control" name="title" required
+                                   placeholder="请输入视频标题" maxlength="200">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">视频描述</label>
+                            <textarea class="form-control" name="description" rows="3"
+                                      placeholder="请输入视频描述（可选）" maxlength="500"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">选择视频文件</label>
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" name="video" id="videoInput" accept="video/*" required hidden>
+                                <i class="fas fa-cloud-upload-alt fa-3x text-secondary mb-3"></i>
+                                <h5>点击或拖拽视频文件到这里</h5>
+                                <p class="text-muted mb-0">支持 MP4, WebM, AVI 格式</p>
+                            </div>
+                            <div id="fileInfo" class="mt-3" style="display: none;">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <i class="fas fa-video fa-2x text-primary me-3"></i>
+                                    <div class="flex-grow-1">
+                                        <div id="fileName" class="fw-medium"></div>
+                                        <div id="fileSize" class="text-muted small"></div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary flex-grow-1" id="submitBtn">
+                                <i class="fas fa-upload me-2"></i>上传视频
+                            </button>
+                            <a href="/" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>取消
+                            </a>
+                        </div>
+                    </form>
+
+                    <div id="uploadProgress" class="mt-4" style="display: none;">
+                        <div class="progress" style="height: 8px; border-radius: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-center text-muted mt-2 mb-0">上传中...</p>
+                    </div>
+
+                    <div id="uploadResult" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const uploadArea = document.getElementById('uploadArea');
+const videoInput = document.getElementById('videoInput');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const removeFile = document.getElementById('removeFile');
+const uploadForm = document.getElementById('uploadForm');
+const uploadProgress = document.getElementById('uploadProgress');
+const submitBtn = document.getElementById('submitBtn');
+const uploadResult = document.getElementById('uploadResult');
+
+// 点击上传区域
+uploadArea.addEventListener('click', () => videoInput.click());
+
+// 拖拽上传
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#4A90D9';
+    uploadArea.style.background = 'rgba(74, 144, 217, 0.1)';
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.style.borderColor = '#ddd';
+    uploadArea.style.background = '';
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#ddd';
+    uploadArea.style.background = '';
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        videoInput.files = files;
+        updateFileInfo(files[0]);
+    }
+});
+
+// 文件选择
+videoInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        updateFileInfo(e.target.files[0]);
+    }
+});
+
+function updateFileInfo(file) {
+    const validTypes = ['video/mp4', 'video/webm', 'video/avi', 'video/x-matroska'];
+    if (!validTypes.includes(file.type)) {
+        alert('请选择有效的视频文件 (MP4, WebM, AVI)');
+        return;
+    }
+
+    fileName.textContent = file.name;
+    const size = file.size / (1024 * 1024);
+    fileSize.textContent = size.toFixed(2) + ' MB';
+
+    uploadArea.style.display = 'none';
+    fileInfo.style.display = 'block';
+}
+
+removeFile.addEventListener('click', () => {
+    videoInput.value = '';
+    uploadArea.style.display = 'block';
+    fileInfo.style.display = 'none';
+});
+
+// 提交表单
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!videoInput.files.length) {
+        alert('请选择视频文件');
+        return;
+    }
+
+    const formData = new FormData(uploadForm);
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>上传中...';
+    uploadProgress.style.display = 'block';
+    uploadResult.innerHTML = '';
+
+    try {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = (e.loaded / e.total) * 100;
+                uploadProgress.querySelector('.progress-bar').style.width = percent + '%';
+            }
+        });
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    uploadResult.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>${data.message}
+                            <a href="/" class="alert-link ms-2">返回首页</a>
+                        </div>
+                    `;
+                    uploadForm.reset();
+                    uploadArea.style.display = 'block';
+                    fileInfo.style.display = 'none';
+                }
+            } else {
+                uploadResult.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>上传失败，请重试
+                    </div>
+                `;
+            }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>上传视频';
+            uploadProgress.style.display = 'none';
+        };
+
+        xhr.onerror = function() {
+            uploadResult.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle me-2"></i>上传失败，请重试
+                </div>
+            `;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>上传视频';
+            uploadProgress.style.display = 'none';
+        };
+
+        xhr.open('POST', '/upload');
+        xhr.send(formData);
+    } catch (error) {
+        console.error('上传错误:', error);
+        uploadResult.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>上传失败，请重试
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}
